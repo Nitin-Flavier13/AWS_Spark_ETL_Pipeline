@@ -1,10 +1,13 @@
 import os
 from dotenv import load_dotenv
 from udf_utils import extract
+from pathlib import Path
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, DateType
+
+load_dotenv()
 
 # def define_udf(file_content):
 #     obj = extract(file_content)
@@ -103,6 +106,7 @@ def define_udf():
         'extract_job_location_udf': udf(extract_job_location_udf, StringType()),
     }
 if __name__ == "__main__":
+
     spark = (
                 SparkSession.builder.appName('AWS_Spark_ETL')
                 .config('spark.jars.packages',
@@ -118,18 +122,22 @@ if __name__ == "__main__":
                         "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider")
                 .config("spark.hadoop.fs.s3a.region", 
                         os.getenv("AWS_REGION"))
+                .config("spark.master", "local[*]")
                 .getOrCreate()
                 # .config("spark.hadoop.fs.s3a.endpoint", 
                 #         "s3.amazonaws.com")
     )
 
-    text_data_dir = os.getenv('text_dir')
-    json_data_dir = os.getenv('json_dir')
-    csv_data_dir = os.getenv('csv_dir')
-    pdf_data_dir = os.getenv('pdf_dir')
-    video_data_dir = os.getenv('video_dir')
-    img_data_dir = os.getenv('img_dir')
 
+    # text_data_dir = os.getenv('text_dir')
+    # json_data_dir = os.getenv('json_dir')
+    # csv_data_dir = os.getenv('csv_dir')
+    # pdf_data_dir = os.getenv('pdf_dir')
+    # video_data_dir = os.getenv('video_dir')
+    # img_data_dir = os.getenv('img_dir')
+
+    text_data_dir = Path(os.getenv('text_dir')).as_posix()
+#     text_data_dir = Path(r"C:\Users\Nitin Flavier\OneDrive\Desktop\Web_Development\Data_Engineering\AWS_Spark_ETL\data\data_text").as_posix()
     dataSchema = StructType([
         StructField('file_name', StringType(), True),
         StructField('position', StringType(), True),
@@ -157,10 +165,18 @@ if __name__ == "__main__":
                      .format('text')        
                      .option('wholetext','true') 
                      .load(text_data_dir)
-                )   
-#     data_text_df.show()
+                )  
+#     Testing 
+#     data_text_df = (spark.read             
+#                 .format('text')        
+#                 .option('wholeText', 'true')  # Correct option
+#                 .load(text_data_dir)
+#         )
+#     data_text_df.show(truncate=False)
     
     query = data_text_df.writeStream.outputMode('append').format('console').start()
 
     query.awaitTermination()
-    
+
+
+
