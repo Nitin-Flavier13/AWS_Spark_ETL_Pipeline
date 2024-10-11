@@ -4,7 +4,7 @@ from udf_utils import extract
 from pathlib import Path
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import udf
+from pyspark.sql.functions import udf, regexp_replace
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, DateType
 
 load_dotenv()
@@ -166,15 +166,27 @@ if __name__ == "__main__":
                      .option('wholetext','true') 
                      .load(text_data_dir)
                 )  
+    data_text_df = data_text_df.withColumn('file_name',
+                                        regexp_replace(udf['extract_filename_udf']('value'),r'\r',''))
+    
+    data_text_df = data_text_df.withColumn('value',regexp_replace('value',r'\r',''))
+    data_text_df = data_text_df.withColumn('position',udf['extract_position_udf']('value'))
+    data_text_df = data_text_df.withColumn('start_date',udf['extract_startdate_udf']('value'))
+    data_text_df = data_text_df.withColumn('end_date',udf['extract_enddate_udf']('value'))
+
+    data_text_df = data_text_df.select('file_name','position','start_date','end_date')
+
 #     Testing 
 #     data_text_df = (spark.read             
 #                 .format('text')        
 #                 .option('wholeText', 'true')  # Correct option
 #                 .load(text_data_dir)
 #         )
-#     data_text_df.show(truncate=False)
-    
-    query = data_text_df.writeStream.outputMode('append').format('console').start()
+    # data_text_df.printSchema()  
+    # data_text_df.show(truncate=False)
+
+    # print(data_text_df('values'))
+    query = data_text_df.writeStream.outputMode('append').format('console').option('truncate',False).start()
 
     query.awaitTermination()
 
