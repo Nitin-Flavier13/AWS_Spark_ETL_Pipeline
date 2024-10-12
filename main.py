@@ -5,31 +5,7 @@ from pathlib import Path
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf, regexp_replace
-from pyspark.sql.types import StructType, StructField, StringType, DoubleType, DateType
-
-load_dotenv()
-
-# def define_udf(file_content):
-#     obj = extract(file_content)
-
-#     return {
-#         'extract_filename_udf': udf(obj.extract_file_name,StringType()),
-#         'extract_position_udf': udf(obj.extract_position,StringType()),
-#         'extract_salary_udf': udf(obj.extract_salary,StructType([
-#             StructField('start_salary',DoubleType(),True),
-#             StructField('end_salary',DoubleType(),True)
-#         ])),
-#         'extract_startdate_udf': udf(obj.extract_start_date,DateType()),
-#         'extract_enddate_udf': udf(obj.extract_end_date,DateType()),
-#         'extract_classcode_udf': udf(obj.extract_class_code,StringType()),
-#         'extract_requirements_udf': udf(obj.extract_requirements,StringType()),
-#         'extract_notes_udf': udf(obj.extract_notes,StringType()),
-#         'extract_duties_udf': udf(obj.extract_duties,StringType()),
-#         'extract_selection_udf': udf(obj.extract_selection,StringType()),
-#         'extract_experience_length_udf': udf(obj.extract_experience_length,StringType()),
-#         'extract_education_length_udf': udf(obj.extract_education_length,StringType()),
-#         'extract_job_location_udf': udf(obj.extract_job_location,StringType()),
-#     }
+from pyspark.sql.types import StructType, StructField, StringType, DoubleType, DateType, IntegerType
 
 def define_udf():
     
@@ -43,8 +19,7 @@ def define_udf():
     
     def extract_salary_udf(file_content):
         obj = extract(file_content)
-        salary = obj.extract_salary()
-        return salary  # Assuming it returns a dict with 'start_salary' and 'end_salary'
+        return obj.extract_salary()  # Assuming it returns a dict with 'start_salary' and 'end_salary'
     
     def extract_startdate_udf(file_content):
         obj = extract(file_content)
@@ -91,8 +66,8 @@ def define_udf():
         'extract_filename_udf': udf(extract_filename_udf, StringType()),
         'extract_position_udf': udf(extract_position_udf, StringType()),
         'extract_salary_udf': udf(extract_salary_udf, StructType([
-            StructField('start_salary', DoubleType(), True),
-            StructField('end_salary', DoubleType(), True)
+            StructField('start_salary', IntegerType(), True),
+            StructField('end_salary', IntegerType(), True)
         ])),
         'extract_startdate_udf': udf(extract_startdate_udf, DateType()),
         'extract_enddate_udf': udf(extract_enddate_udf, DateType()),
@@ -106,6 +81,8 @@ def define_udf():
         'extract_job_location_udf': udf(extract_job_location_udf, StringType()),
     }
 if __name__ == "__main__":
+
+    load_dotenv()
 
     spark = (
                 SparkSession.builder.appName('AWS_Spark_ETL')
@@ -129,6 +106,7 @@ if __name__ == "__main__":
     )
 
 
+    text_data_dir = Path(os.getenv('text_dir')).as_posix()
     # text_data_dir = os.getenv('text_dir')
     # json_data_dir = os.getenv('json_dir')
     # csv_data_dir = os.getenv('csv_dir')
@@ -136,14 +114,13 @@ if __name__ == "__main__":
     # video_data_dir = os.getenv('video_dir')
     # img_data_dir = os.getenv('img_dir')
 
-    text_data_dir = Path(os.getenv('text_dir')).as_posix()
 #     text_data_dir = Path(r"C:\Users\Nitin Flavier\OneDrive\Desktop\Web_Development\Data_Engineering\AWS_Spark_ETL\data\data_text").as_posix()
     dataSchema = StructType([
         StructField('file_name', StringType(), True),
         StructField('position', StringType(), True),
         StructField('classcode', StringType(), True),
-        StructField('salary_start', DoubleType(), True),
-        StructField('salary_end', DoubleType(), True),
+        StructField('salary_start', IntegerType(), True),
+        StructField('salary_end', IntegerType(), True),
         StructField('start_date', DateType(), True),
         StructField('end_date', DateType(), True),
         StructField('req', StringType(), True),
@@ -159,22 +136,29 @@ if __name__ == "__main__":
     ])
 
     # user defined functions
+    # make sure the return type of udf functions match the schema mentioned,
+    # otherwise it will take null value it will not typecast for eg
+    # if udf returns INT but the schema is Doubletype then it will store
+    # the values as NULL
+    
     udf = define_udf()
 
     data_text_df = ( spark.readStream            
                      .format('text')        
                      .option('wholetext','true') 
                      .load(text_data_dir)
-                )  
-    data_text_df = data_text_df.withColumn('file_name',
-                                        regexp_replace(udf['extract_filename_udf']('value'),r'\r',''))
-    
+                )
+      
     data_text_df = data_text_df.withColumn('value',regexp_replace('value',r'\r',''))
+    data_text_df = data_text_df.withColumn('file_name',udf['extract_filename_udf']('value'))
+    data_text_df = data_text_df.withColumn('classcode',udf['extract_classcode_udf']('value'))
     data_text_df = data_text_df.withColumn('position',udf['extract_position_udf']('value'))
     data_text_df = data_text_df.withColumn('start_date',udf['extract_startdate_udf']('value'))
     data_text_df = data_text_df.withColumn('end_date',udf['extract_enddate_udf']('value'))
+    data_text_df = data_text_df.withColumn('salary_start',udf['extract_salary_udf']('value').getField('start_salary'))
+    data_text_df = data_text_df.withColumn('salary_end',udf['extract_salary_udf']('value').getField('end_salary'))
 
-    data_text_df = data_text_df.select('file_name','position','start_date','end_date')
+    data_text_df = data_text_df.select('file_name','position','classcode','salary_start','salary_end','start_date','end_date')
 
 #     Testing 
 #     data_text_df = (spark.read             

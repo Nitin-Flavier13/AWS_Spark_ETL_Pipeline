@@ -56,13 +56,18 @@ class extract:
 
 
     def extract_salary(self):
-        pass
-        # matches = re.findall(r'\$(\S+)',self.file_content)
-        # data = [int(match.replace(',','')) for match in matches]
-        # start_salary = min(data[0],data[2])
-        # end_salary = max(data[1],data[3])
-
-        # return {start_salary,end_salary}
+        try:
+            matches = re.findall(r'\$(\S+)',self.file_content)
+            
+            if matches:
+                data = [int(match.replace(',','')) for match in matches]
+                start_salary = min(data)
+                end_salary = max(data)
+                return {'start_salary': start_salary,'end_salary': end_salary}
+            else:
+                return {'start_salary': None,'end_salary': None}
+        except Exception as e:
+            raise ValueError(f'Error extracting salary: {e}')
 
     def extract_requirements(self):
         pass
