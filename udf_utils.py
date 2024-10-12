@@ -70,23 +70,53 @@ class extract:
             raise ValueError(f'Error extracting salary: {e}')
 
     def extract_requirements(self):
-        pass
+        try:
+            match = re.search(r'(REQUIREMENTS?/\s?MINIMUM QUALIFICATIONS?)(.*)(PROCESS NOTES?)',self.file_content,re.DOTALL)
+            return match.group(2).strip() if match else None
+        except Exception as e:
+            raise ValueError(f'Error extracting requirements: {e}')
+        
 
     def extract_notes(self):
-        pass
+        try:
+            match = re.search(r'NOTES?:\s*\n+(.*?)(?=\n{2,}DUTIES)', self.file_content, re.DOTALL)
+            return match.group(1).strip() if match else None
+        except Exception as e:
+            raise ValueError(f'Error extracting notes: {e}')
+        
 
     def extract_duties(self):
-        pass
+        try:   
+            match = re.search(r'DUTIES\n\n(.*)\n\nREQUIREMENTS?', self.file_content, re.DOTALL)
+            
+            if match:
+                # print(match.group(1))
+                return match.group(1).strip()
+            else:
+                return None
+        except Exception as e:
+            raise ValueError(f'Error extracting Duties: {e}')
 
     def extract_selection(self):
-        pass 
+        try:
+            match = re.findall(r'([A-Z][a-z]+)(\s\.\s)+',self.file_content)
+            print(match)
+            data = [ele[0] for ele in match] if match else None
+            return data
+        except Exception as e:
+            raise ValueError(f'Error extracting selection {e}')
 
     def extract_experience_length(self):
-        pass
+        try:
+            match = re.search(r'(One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|one|two|three|four|five|six|seven|eight|nine|ten)\s?-?years?',self.file_content)
+            return match.group(1).strip() if match else None
+        except Exception as e:
+            raise ValueError(f'Error extracting experience length')
 
-    def extract_education_length(self):
-        pass
-
-    def extract_job_location(self):
-        pass 
+    def extract_apply_location_udf(self):
+        try:
+            match = re.search(r'WHERE\sTO\sAPPLY\n\n(.*)\n\n[A-Z]+',self.file_content)
+            return match.group(1).strip() if match else None
+        except Exception as e:
+            raise ValueError(f'Error extracting job location {e}')
 

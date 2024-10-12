@@ -57,9 +57,9 @@ def define_udf():
         obj = extract(file_content)
         return obj.extract_education_length()
     
-    def extract_job_location_udf(file_content):
+    def extract_apply_location_udf(file_content):
         obj = extract(file_content)
-        return obj.extract_job_location()
+        return obj.extract_apply_location_udf()
     
     # Register UDFs with appropriate return types
     return {
@@ -77,8 +77,7 @@ def define_udf():
         'extract_duties_udf': udf(extract_duties_udf, StringType()),
         'extract_selection_udf': udf(extract_selection_udf, StringType()),
         'extract_experience_length_udf': udf(extract_experience_length_udf, StringType()),
-        'extract_education_length_udf': udf(extract_education_length_udf, StringType()),
-        'extract_job_location_udf': udf(extract_job_location_udf, StringType()),
+        'extract_apply_location_udf': udf(extract_apply_location_udf, StringType()),
     }
 if __name__ == "__main__":
 
@@ -128,10 +127,9 @@ if __name__ == "__main__":
         StructField('duties', StringType(), True),
         StructField('selection', StringType(), True),
         StructField('experience_length', StringType(), True),
+        StructField('apply_location', StringType(), True),
         StructField('job_type', StringType(), True),
-        StructField('education_length', StringType(), True),
         StructField('school_type', StringType(), True),
-        StructField('job_location', StringType(), True),
 
     ])
 
@@ -157,8 +155,16 @@ if __name__ == "__main__":
     data_text_df = data_text_df.withColumn('end_date',udf['extract_enddate_udf']('value'))
     data_text_df = data_text_df.withColumn('salary_start',udf['extract_salary_udf']('value').getField('start_salary'))
     data_text_df = data_text_df.withColumn('salary_end',udf['extract_salary_udf']('value').getField('end_salary'))
+    data_text_df = data_text_df.withColumn('req',udf['extract_requirements_udf']('value'))
+    data_text_df = data_text_df.withColumn('notes',udf['extract_notes_udf']('value'))
+    data_text_df = data_text_df.withColumn('duties',udf['extract_duties_udf']('value'))
+    data_text_df = data_text_df.withColumn('selection',udf['extract_selection_udf']('value'))
+    data_text_df = data_text_df.withColumn('experience_length',udf['extract_experience_length_udf']('value'))
+    data_text_df = data_text_df.withColumn('apply_location',udf['extract_apply_location_udf']('value'))
 
-    data_text_df = data_text_df.select('file_name','position','classcode','salary_start','salary_end','start_date','end_date')
+    data_text_df = data_text_df.select('file_name','position','classcode','salary_start','salary_end','start_date','end_date','req','notes','duties','selection','experience_length','apply_location')
+    # data_text_df = data_text_df.select('file_name','position','classcode','salary_start','salary_end','start_date','end_date','req','notes')
+    # data_text_df = data_text_df.select('value')
 
 #     Testing 
 #     data_text_df = (spark.read             
